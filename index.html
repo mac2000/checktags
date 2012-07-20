@@ -1,1 +1,124 @@
-TODO
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Check ommited tags</title>
+    <meta name="description" content="Online tool to check for ommited tags">
+    <meta name="author" content="Marchenko Alexandr">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <link rel="stylesheet" href="http://current.bootstrapcdn.com/bootstrap-v204/css/bootstrap-combined.min.css">
+    <link rel="stylesheet" href="http://yandex.st/highlightjs/6.1/styles/github.min.css">
+    <style>
+        pre, code {color:#999}
+        .label-warning, .label-warning .title {color:white!important;font-weight:bold!important;}
+    </style>
+</head>
+<body>
+<div class="container" role="main" style="margin:1em auto">
+    <h2>Check ommited tags</h2>
+    <form class="well">
+        <!--[if IE]><label>HTML or URL...</label><![endif]-->
+        <textarea class="span11" rows="20" type="text" id="html" placeholder="HTML or URL..." required></textarea>
+        <button type="submit" class="btn disabled">Check</button> 
+        <noscript><span class="badge badge-error">Turn on javascript please<span></noscript>
+    </form>
+</div>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="http://yandex.st/highlightjs/7.0/highlight.min.js"></script>
+<script>
+    (function($){
+        $('button').removeClass('disabled');
+
+        //TODO: table with results will be here
+        var $pre = $('<pre></pre>').hide().appendTo('.container');
+        var $code = $('<code></code>').addClass('html').appendTo('pre:first');
+
+        $('form').on('submit', function(e){
+            e.preventDefault();
+
+            var html = $.trim($('#html').val());
+
+            if(!!html.match(/^https?:\/\//i)) { // if user give us url to css file
+                var htmlUrl = html;
+                var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=' + encodeURIComponent('select * from html where url="' + htmlUrl + '"') + '&format=json&callback=cbfunc';
+                $.ajax({
+                    type: "GET",
+                    url: yqlUrl,
+                    contentType: "application/json; charset=utf-8",
+                    jsonpCallback: "cbfunc",
+                    dataType: "jsonp",
+                    success: function(data) {
+                        var d = data.query.results.body.p;
+                        $('#html').val(d);
+                        html = check_closed_tags(html);
+                        colorize_and_report(html)
+                    },
+                    error: function(xhr, textStatus, errorThrown) {
+                        alert('Can not download CSS\n' + textStatus);
+                    }
+                });
+            } else { // if user give us css
+                html = check_closed_tags(html);
+                colorize_and_report(html)
+            }
+
+            return false;
+        });
+
+        function htmlspecialchars(string) {
+            return jQuery('<span>').text(string).html();
+        }
+
+        function check_closed_tags(html) {
+            //remove comments
+            html = html.replace(/<!--[\s\S]*?-->/gi, '');
+            //collapse scripts
+            html = html.replace(/<script[\s\S]*?<\/script>/gi, '[script]');
+            //collapse self closed tags
+            html = html.replace(/<(\w+[^>]*\/)>/gi, '[$1]');
+
+            //collapse safe selft closed tags
+            html = html.replace(new RegExp('<(img[^>]*)>', 'gi'), '[$1]');
+            html = html.replace(new RegExp('<(br[^>]*)>', 'gi'), '[$1]');
+            html = html.replace(new RegExp('<(hr[^>]*)>', 'gi'), '[$1]');
+            html = html.replace(new RegExp('<(input[^>]*)>', 'gi'), '[$1]');
+            html = html.replace(new RegExp('<(button[^>]*)>', 'gi'), '[$1]');
+            html = html.replace(new RegExp('<(meta[^>]*)>', 'gi'), '[$1]');
+            html = html.replace(new RegExp('<(link[^>]*)>', 'gi'), '[$1]');
+
+            //collapse tags without nested tags
+            while(html.match(/<(\w+)[^>]*>(?:(?!\$\{)[^<])*<\/\1>/gi)) {
+                html = html.replace(/<(\w+)([^>]*)>(?:(?!\$\{)[^<])*<\/\1>/gi, '[$1$2]...[$1]');
+            }
+
+            return html;
+        }
+
+        function colorize_and_report(html) {
+            $pre.show();
+            $code.html(htmlspecialchars(html));
+            hljs.highlightBlock($code.get(0));
+            add_class_names();
+        }
+
+        function add_class_names() {
+            $('.tag:contains("</")', $code).addClass('close_tag');
+            $('.tag[class="tag"]', $code).addClass('open_tag');
+
+            $('.tag', $code).each(function(index, item){
+                $(item).addClass($(item).find('.title').text()+'_tag');
+            });
+
+            $('.tag', $code).each(function(index, item){
+                var tag = $(item).find('.title').text();
+                var open = $('span.tag.open_tag.' + tag + '_tag').size();
+                var close = $('span.tag.close_tag.' + tag + '_tag').size();
+                if(open != close) $(item).addClass('label').addClass('label-warning');
+            });
+        }
+    })(jQuery);
+</script>
+</body>
+</html>
