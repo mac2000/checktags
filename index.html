@@ -50,7 +50,7 @@
                     jsonpCallback: "cbfunc",
                     dataType: "jsonp",
                     success: function(data) {
-                        var d = data.query.results.body.p;
+                        var d = data.query.results.body;
                         $('#html').val(d);
                         html = check_closed_tags(html);
                         colorize_and_report(html)
