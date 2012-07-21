@@ -18,8 +18,8 @@
 <div class="container-fluid" role="main" style="margin:1em auto">
     <h2>Check ommited tags</h2>
     <form class="well">
-        <!--[if IE]><label>HTML or URL...</label><![endif]-->
-        <textarea style="width:99%" rows="20" type="text" id="html" placeholder="HTML or URL..." required></textarea>
+        <!--[if IE]><label>HTML...</label><![endif]-->
+        <textarea style="width:99%" rows="20" type="text" id="html" placeholder="HTML..." required></textarea>
         <button type="submit" class="btn disabled">Check</button> 
         <noscript><span class="badge badge-error">Turn on javascript please<span></noscript>
     </form>
@@ -31,7 +31,6 @@
     (function($){
         $('button').removeClass('disabled');
 
-        //TODO: table with results will be here
         var $pre = $('<pre></pre>').hide().appendTo('.container-fluid');
         var $code = $('<code></code>').addClass('html').appendTo('pre:first');
 
@@ -40,29 +39,8 @@
 
             var html = $.trim($('#html').val());
 
-            if(!!html.match(/^https?:\/\//i)) { // if user give us url to css file
-                var htmlUrl = html;
-                var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=' + encodeURIComponent('select * from html where url="' + htmlUrl + '"') + '&format=json&callback=cbfunc';
-                $.ajax({
-                    type: "GET",
-                    url: yqlUrl,
-                    contentType: "application/json; charset=utf-8",
-                    jsonpCallback: "cbfunc",
-                    dataType: "jsonp",
-                    success: function(data) {
-                        var d = data.query.results.body;
-                        $('#html').val(d);
-                        html = check_closed_tags(html);
-                        colorize_and_report(html)
-                    },
-                    error: function(xhr, textStatus, errorThrown) {
-                        alert('Can not download CSS\n' + textStatus);
-                    }
-                });
-            } else { // if user give us css
-                html = check_closed_tags(html);
-                colorize_and_report(html)
-            }
+            html = check_closed_tags(html);
+            colorize_and_report(html)
 
             return false;
         });
